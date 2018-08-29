@@ -14,6 +14,8 @@ MAN3 = \
         modbus_new_rtu.3 \
         modbus_new_tcp_pi.3 \
         modbus_new_tcp.3 \
+        modbus_new_rtutcp_pi.3 \
+        modbus_new_rtutcp.3 \
         modbus_read_bits.3 \
         modbus_read_input_bits.3 \
         modbus_read_input_registers.3 \

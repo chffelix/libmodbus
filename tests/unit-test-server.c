@@ -27,7 +27,9 @@
 enum {
     TCP,
     TCP_PI,
-    RTU
+    RTU,
+    RTUTCP,
+    RTUTCP_PI
 };
 
 int main(int argc, char*argv[])
@@ -48,8 +50,12 @@ int main(int argc, char*argv[])
             use_backend = TCP_PI;
         } else if (strcmp(argv[1], "rtu") == 0) {
             use_backend = RTU;
+        } else if (strcmp(argv[1], "rtutcp") == 0) {
+            use_backend = RTUTCP;
+        } else if (strcmp(argv[1], "rtutcppi") == 0) {
+            use_backend = RTUTCP_PI;
         } else {
-            printf("Usage:\n  %s [tcp|tcppi|rtu] - Modbus server for unit testing\n\n", argv[0]);
+            printf("Usage:\n  %s [tcp|tcppi|rtu|rtutcp|rtutcppi] - Modbus server for unit testing\n\n", argv[0]);
             return -1;
         }
     } else {
@@ -63,10 +69,18 @@ int main(int argc, char*argv[])
     } else if (use_backend == TCP_PI) {
         ctx = modbus_new_tcp_pi("::0", "1502");
         query = malloc(MODBUS_TCP_MAX_ADU_LENGTH);
-    } else {
+    } else if (use_backend == RTU) {
         ctx = modbus_new_rtu("/dev/ttyUSB0", 115200, 'N', 8, 1);
         modbus_set_slave(ctx, SERVER_ID);
         query = malloc(MODBUS_RTU_MAX_ADU_LENGTH);
+    } else if (use_backend == RTUTCP) {
+        ctx = modbus_new_rtutcp("127.0.0.1", 1502);
+        query = malloc(MODBUS_RTUTCP_MAX_ADU_LENGTH);
+    } else if (use_backend == RTUTCP_PI) {
+        ctx = modbus_new_rtutcp_pi("::0", "1502");
+        query = malloc(MODBUS_RTUTCP_MAX_ADU_LENGTH);
+    } else {
+      return -1;
     }
     header_length = modbus_get_header_length(ctx);
 
@@ -104,13 +118,21 @@ int main(int argc, char*argv[])
     } else if (use_backend == TCP_PI) {
         socket = modbus_tcp_pi_listen(ctx, 1);
         modbus_tcp_pi_accept(ctx, &socket);
-    } else {
+    } else if (use_backend == RTU) {
         rc = modbus_connect(ctx);
         if (rc == -1) {
             fprintf(stderr, "Unable to connect %s\n", modbus_strerror(errno));
             modbus_free(ctx);
             return -1;
         }
+    } else if (use_backend == RTUTCP) {
+        socket = modbus_rtutcp_listen(ctx, 1);
+        modbus_rtutcp_accept(ctx, &socket);
+    } else if (use_backend == RTUTCP_PI) {
+        socket = modbus_rtutcp_pi_listen(ctx, 1);
+        modbus_rtutcp_pi_accept(ctx, &socket);
+    } else {
+      return -1;
     }
 
     for (;;) {
@@ -144,7 +166,7 @@ int main(int argc, char*argv[])
 
     printf("Quit the loop: %s\n", modbus_strerror(errno));
 
-    if (use_backend == TCP || use_backend == TCP_PI) {
+    if (use_backend == TCP || use_backend == TCP_PI || use_backend == RTUTCP || use_backend == RTUTCP_PI) {
         close(socket);
     }
     modbus_mapping_free(mb_mapping);

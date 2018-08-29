@@ -27,7 +27,9 @@
 enum {
     TCP,
     TCP_PI,
-    RTU
+    RTU,
+    RTUTCP,
+    RTUTCP_PI
 };
 
 int main(int argc, char *argv[])
@@ -49,12 +51,16 @@ int main(int argc, char *argv[])
     if (argc > 1) {
         if (strcmp(argv[1], "tcp") == 0) {
             use_backend = TCP;
-	      } else if (strcmp(argv[1], "tcppi") == 0) {
+        } else if (strcmp(argv[1], "tcppi") == 0) {
             use_backend = TCP_PI;
         } else if (strcmp(argv[1], "rtu") == 0) {
             use_backend = RTU;
+        } else if (strcmp(argv[1], "rtutcp") == 0) {
+            use_backend = RTUTCP;
+        } else if (strcmp(argv[1], "rtutcppi") == 0) {
+            use_backend = RTUTCP_PI;
         } else {
-            printf("Usage:\n  %s [tcp|tcppi|rtu] - Modbus client for unit testing\n\n", argv[0]);
+            printf("Usage:\n  %s [tcp|tcppi|rtu|rtutcp|rtutcppi] - Modbus client for unit testing\n\n", argv[0]);
             exit(1);
         }
     } else {
@@ -66,8 +72,14 @@ int main(int argc, char *argv[])
         ctx = modbus_new_tcp("127.0.0.1", 1502);
     } else if (use_backend == TCP_PI) {
         ctx = modbus_new_tcp_pi("::1", "1502");
-    } else {
+    } else if (use_backend == RTU) {
         ctx = modbus_new_rtu("/dev/ttyUSB1", 115200, 'N', 8, 1);
+    } else if (use_backend == RTUTCP) {
+        ctx = modbus_new_rtutcp("127.0.0.1", 1502);
+    } else if (use_backend == RTUTCP_PI) {
+        ctx = modbus_new_rtutcp_pi("::1", "1502");
+    } else {
+      return -1;
     }
     if (ctx == NULL) {
         fprintf(stderr, "Unable to allocate libmodbus context\n");
@@ -493,7 +505,7 @@ int main(int argc, char *argv[])
     modbus_set_slave(ctx, INVALID_SERVER_ID);
     rc = modbus_read_registers(ctx, UT_REGISTERS_ADDRESS,
                                UT_REGISTERS_NB, tab_rp_registers);
-    if (use_backend == RTU) {
+    if (use_backend == RTU || use_backend == RTUTCP || use_backend == RTUTCP_PI) {
         const int RAW_REQ_LENGTH = 6;
         uint8_t raw_req[] = { INVALID_SERVER_ID, 0x03, 0x00, 0x01, 0xFF, 0xFF };
         uint8_t rsp[MODBUS_TCP_MAX_ADU_LENGTH];
@@ -660,7 +672,9 @@ int main(int argc, char *argv[])
         printf("* modbus_send_raw_request: ");
         if ((use_backend == RTU && req_length == (RAW_REQ_LENGTH + 2)) ||
             ((use_backend == TCP || use_backend == TCP_PI) &&
-             req_length == (RAW_REQ_LENGTH + 6))) {
+            req_length == (RAW_REQ_LENGTH + 6)) ||
+            ((use_backend == RTUTCP || use_backend == RTUTCP_PI) &&
+            req_length == (RAW_REQ_LENGTH + 2))) {
             printf("OK\n");
         } else {
             printf("FAILED (%d)\n", req_length);
@@ -670,8 +684,9 @@ int main(int argc, char *argv[])
         printf("* modbus_receive_confirmation: ");
         rc  = modbus_receive_confirmation(ctx, rsp);
         if ((use_backend == RTU && rc == 15) ||
-            ((use_backend == TCP || use_backend == TCP_PI) &&
-             rc == 19)) {
+            ((use_backend == TCP || use_backend == TCP_PI) && rc == 19) ||
+            ((use_backend == RTUTCP || use_backend == RTUTCP_PI)
+            && rc == 15)) {
             printf("OK\n");
         } else {
             printf("FAILED (%d)\n", rc);

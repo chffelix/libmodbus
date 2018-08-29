@@ -239,7 +239,7 @@ static int _modbus_tcp_set_ipv4_options(int s)
 }
 
 /* Establishes a modbus TCP connection with a Modbus server. */
-static int _modbus_tcp_connect(modbus_t *ctx)
+int _modbus_tcp_connect(modbus_t *ctx)
 {
     int rc;
     struct sockaddr_in addr;
@@ -280,7 +280,7 @@ static int _modbus_tcp_connect(modbus_t *ctx)
 }
 
 /* Establishes a modbus TCP PI connection with a Modbus server. */
-static int _modbus_tcp_pi_connect(modbus_t *ctx)
+int _modbus_tcp_pi_connect(modbus_t *ctx)
 {
     int rc;
     struct addrinfo *ai_list;
