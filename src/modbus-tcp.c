@@ -438,6 +438,12 @@ int modbus_tcp_pi_listen(modbus_t *ctx, int nb_connection)
     int new_socket;
     modbus_tcp_pi_t *ctx_tcp_pi = ctx->backend_data;
 
+#ifdef OS_WIN32
+    if (_modbus_tcp_init_win32() == -1) {
+        return -1;
+    }
+#endif
+
     if (ctx_tcp_pi->node[0] == 0)
         node = NULL; /* == any */
     else
